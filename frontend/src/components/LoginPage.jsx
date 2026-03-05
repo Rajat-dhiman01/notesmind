@@ -7,9 +7,21 @@ import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 const GOOGLE_CLIENT_ID = "865105279668-83p47rnnt1u51621u02umbdd2dsnokcm.apps.googleusercontent.com";
 
 // ---------------------------------------------------------------------------
+// Decode a JWT payload without a library
+// The middle segment (index 1) is base64-encoded JSON
+// ---------------------------------------------------------------------------
+function decodeJwtPayload(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1]))
+  } catch {
+    return {}
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main Login Page
 // isModal={true}  → just the card — App.jsx provides the backdrop
-// isModal={false} → standalone full-screen page (no longer used by App.jsx)
+// isModal={false} → standalone full-screen page (fallback, not used by App.jsx)
 // ---------------------------------------------------------------------------
 
 export default function LoginPage({ onLogin, isModal = false }) {
@@ -19,14 +31,24 @@ export default function LoginPage({ onLogin, isModal = false }) {
   const [demoEmail, setDemoEmail]       = useState("demo@notesmind.app");
   const [demoPassword, setDemoPassword] = useState("");
 
-  // GoogleLogin component calls this with { credential } — credential IS the id_token
+  // GoogleLogin component calls this with credentialResponse
+  // credentialResponse.credential is the id_token (a JWT)
+  // We decode it to extract name, email, and profile picture
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     setError("");
     try {
-      // credentialResponse.credential is the id_token — send it directly to backend
-      const result = await loginWithGoogle(credentialResponse.credential);
-      onLogin(result.token, result.name, result.email);
+      const idToken = credentialResponse.credential
+
+      // Decode JWT payload to get profile picture URL
+      const payload = decodeJwtPayload(idToken)
+      const picture = payload.picture || null   // Google profile photo URL
+
+      // Send id_token to backend — backend validates + issues NotesMind JWT
+      const result = await loginWithGoogle(idToken);
+
+      // Pass picture as 4th argument — App.jsx stores it in userPicture state
+      onLogin(result.token, result.name, result.email, picture);
     } catch (err) {
       setError(err.message || "Google login failed. Please try again.");
     } finally {
@@ -44,7 +66,8 @@ export default function LoginPage({ onLogin, isModal = false }) {
     setError("");
     try {
       const result = await loginWithDemo(demoEmail, demoPassword);
-      onLogin(result.token, result.name, result.email);
+      // Demo has no profile picture — pass null as 4th argument
+      onLogin(result.token, result.name, result.email, null);
     } catch (err) {
       setError(err.message || "Demo login failed.");
     } finally {
@@ -110,13 +133,7 @@ export default function LoginPage({ onLogin, isModal = false }) {
 
       {/* Buttons */}
       <div>
-
-        {/* GoogleLogin component — gives credential (id_token) directly */}
-        <div style={{
-          width: "100%",
-          // Force the Google button to fill the container width
-          display: "flex", justifyContent: "center",
-        }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={handleGoogleError}
@@ -223,7 +240,6 @@ export default function LoginPage({ onLogin, isModal = false }) {
           </div>
         )}
 
-        {/* Error message */}
         {error && (
           <div style={{
             marginTop: "14px", padding: "10px 14px",
@@ -243,7 +259,6 @@ export default function LoginPage({ onLogin, isModal = false }) {
     </div>
   );
 
-  // Modal mode — App.jsx provides the backdrop, just render the card
   if (isModal) {
     return (
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -263,7 +278,6 @@ export default function LoginPage({ onLogin, isModal = false }) {
     );
   }
 
-  // Standalone full-screen mode (fallback)
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <style>{`

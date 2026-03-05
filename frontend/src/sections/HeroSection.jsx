@@ -67,6 +67,10 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
         alignItems: 'center',
         gap: '24px',
         animation: 'fadeUp 0.8s ease both',
+        padding: '0 24px',
+        whiteSpace: 'nowrap',
+        maxWidth: '600px',
+        boxSizing: 'border-box',
       }}>
         <div style={{
           fontFamily: "'DM Mono', monospace",
@@ -77,13 +81,15 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           border: '1px solid #2a2a2a',
           padding: '6px 14px',
           borderRadius: '100px',
+          textAlign: 'center',
         }}>
           Local AI — No Cloud — No API Keys
         </div>
 
+        {/* Title — clamp starts smaller on mobile */}
         <h1 style={{
           fontFamily: "'Syne', sans-serif",
-          fontSize: 'clamp(64px, 10vw, 108px)',
+          fontSize: 'clamp(32px, 5vw, 72px)',
           fontWeight: 800,
           lineHeight: 0.95,
           letterSpacing: '-0.03em',
@@ -92,24 +98,31 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
+          margin: 0,
+          whiteSpace: 'nowrap',
         }}>
           NotesMind
         </h1>
 
         <p style={{
           fontFamily: "'DM Mono', monospace",
-          fontSize: '15px',
+          fontSize: 'clamp(13px, 3.5vw, 15px)',
           color: '#888888',
           textAlign: 'center',
           maxWidth: '400px',
           lineHeight: 1.7,
+          margin: 0,
         }}>
           Ask questions. Get answers.<br />Strictly from your own notes.
         </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
-          {/* "Start Using" — now a button, calls onStartUsing prop */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+        }}>
           <button
             onClick={onStartUsing}
             style={{
@@ -125,6 +138,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
               alignItems: 'center',
               gap: '8px',
               transition: 'background 150ms ease, transform 150ms ease',
+              whiteSpace: 'nowrap',
             }}
             onMouseEnter={e => { e.currentTarget.style.background = '#4338ca'; e.currentTarget.style.transform = 'translateY(-1px)' }}
             onMouseLeave={e => { e.currentTarget.style.background = '#4f46e5'; e.currentTarget.style.transform = 'translateY(0)' }}
@@ -150,6 +164,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
               cursor: 'pointer',
               textDecoration: 'none',
               transition: 'border-color 150ms, color 150ms',
+              whiteSpace: 'nowrap',
             }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.color = '#f0f0f0' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888888' }}

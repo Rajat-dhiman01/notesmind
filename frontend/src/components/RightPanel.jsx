@@ -57,9 +57,9 @@ const MD_COMPONENTS = {
         background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px',
         padding: '16px', overflowX: 'auto', margin: '12px 0',
       }}>
-        <code style={{
-          fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#e5e5e5',
-        }}>{children}</code>
+        <code style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#e5e5e5' }}>
+          {children}
+        </code>
       </pre>
     ),
   blockquote: ({ children }) => (
@@ -112,19 +112,16 @@ function AiBubble({ text, isStreaming }) {
   )
 }
 
-// Auth prompt bubble — shown when user tries to chat without signing in
 function AuthPromptBubble({ onOpenLogin }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px', animation: 'msgAppear 0.2s ease both' }}>
       <div style={{
-        padding: '12px 16px',
+        maxWidth: '75%', padding: '12px 16px',
         borderRadius: '18px 18px 18px 4px',
         background: 'rgba(79,70,229,0.08)',
         border: '1px solid rgba(79,70,229,0.25)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        flexWrap: 'wrap',
+        display: 'flex', alignItems: 'center',
+        gap: '12px', flexWrap: 'wrap',
       }}>
         <span style={{ fontSize: '13px', color: '#a5b4fc', lineHeight: 1.5 }}>
           Sign in to start asking questions.
@@ -132,16 +129,11 @@ function AuthPromptBubble({ onOpenLogin }) {
         <button
           onClick={onOpenLogin}
           style={{
-            background: 'rgba(79,70,229,0.2)',
-            border: '1px solid rgba(79,70,229,0.4)',
-            borderRadius: '6px',
-            color: '#a5b4fc',
-            fontSize: '12px',
-            padding: '4px 12px',
-            cursor: 'pointer',
+            background: 'rgba(79,70,229,0.2)', border: '1px solid rgba(79,70,229,0.4)',
+            borderRadius: '6px', color: '#a5b4fc', fontSize: '12px',
+            padding: '4px 12px', cursor: 'pointer',
             fontFamily: "'DM Mono', monospace",
-            whiteSpace: 'nowrap',
-            transition: 'background 150ms',
+            whiteSpace: 'nowrap', transition: 'background 150ms',
           }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(79,70,229,0.35)'}
           onMouseLeave={e => e.currentTarget.style.background = 'rgba(79,70,229,0.2)'}
@@ -174,7 +166,7 @@ function ThinkingBubble() {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function RightPanel({ token, onOpenLogin }) {
+export default function RightPanel({ token, onOpenLogin, isMobile, onOpenDrawer }) {
   const [messages, setMessages]           = useState([])
   const [streamingText, setStreamingText] = useState('')
   const [isThinking, setIsThinking]       = useState(false)
@@ -191,13 +183,9 @@ export default function RightPanel({ token, onOpenLogin }) {
     const question = input.trim()
     if (!question || isThinking || isStreaming) return
 
-    // Not logged in — echo the user message then show auth prompt bubble
     if (!token) {
-      setMessages(prev => [
-        ...prev,
-        { role: 'user', text: question },
-        { role: 'auth' },
-      ])
+      setMessages(prev => [...prev, { role: 'user', text: question }])
+      setMessages(prev => [...prev, { role: 'auth' }])
       setInput('')
       return
     }
@@ -209,12 +197,11 @@ export default function RightPanel({ token, onOpenLogin }) {
     streamBufferRef.current = ''
 
     streamQuestion(
-      question,
-      token,
-      (tok) => {
+      question, token,
+      (token) => {
         setIsThinking(false)
         setIsStreaming(true)
-        streamBufferRef.current += tok
+        streamBufferRef.current += token
         setStreamingText(streamBufferRef.current)
       },
       () => {
@@ -254,29 +241,98 @@ export default function RightPanel({ token, onOpenLogin }) {
 
   return (
     <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column',
-      background: '#080808', fontFamily: "'DM Mono', monospace", overflow: 'hidden',
+      // On mobile: take full width. On desktop: flex-1 as before.
+      flex: 1,
+      width: isMobile ? '100%' : undefined,
+      display: 'flex',
+      flexDirection: 'column',
+      background: '#080808',
+      fontFamily: "'DM Mono', monospace",
+      overflow: 'hidden',
     }}>
 
       {/* ── Header ── */}
       <div style={{
-        height: '52px', padding: '0 24px', borderBottom: '1px solid #1a1a1a',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+        height: '52px',
+        padding: '0 16px',
+        borderBottom: '1px solid #1a1a1a',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+          {/* Hamburger button — mobile only */}
+          {isMobile && (
+            <button
+              onClick={onOpenDrawer}
+              style={{
+                background: 'none',
+                border: '1px solid #2a2a2a',
+                color: '#555',
+                width: '32px',
+                height: '32px',
+                borderRadius: '7px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'border-color 150ms, color 150ms',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.color = '#a5b4fc' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#555' }}
+            >
+              {/* Hamburger icon */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="3" y1="6"  x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+          )}
+
           <div style={{
-            width: '7px', height: '7px', borderRadius: '50%', background: '#4f46e5',
-            boxShadow: '0 0 6px rgba(79,70,229,0.8)', animation: 'pulseDot 2s ease infinite',
+            width: '7px', height: '7px', borderRadius: '50%',
+            background: '#4f46e5', boxShadow: '0 0 6px rgba(79,70,229,0.8)',
+            animation: 'pulseDot 2s ease infinite',
           }} />
-          <span style={{ fontSize: '13px', color: '#f0f0f0', fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>
+          <span style={{
+            fontSize: '13px', color: '#f0f0f0',
+            fontFamily: "'Syne', sans-serif", fontWeight: 600,
+          }}>
             NotesMind
           </span>
           <span style={{ fontSize: '13px', color: '#555' }}>/</span>
           <span style={{ fontSize: '13px', color: '#555' }}>Chat</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ fontSize: '11px', color: '#555' }}>Llama 3.1 · Groq</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Hide model label on mobile to save space */}
+          {!isMobile && (
+            <div style={{ fontSize: '11px', color: '#555' }}>Llama 3.1 · Groq</div>
+          )}
+
+          {/* Sign in button — only when not logged in */}
+          {!token && (
+            <button
+              onClick={onOpenLogin}
+              style={{
+                fontSize: '11px', color: '#a5b4fc',
+                border: '1px solid rgba(79,70,229,0.35)',
+                padding: '3px 10px', borderRadius: '5px',
+                background: 'rgba(79,70,229,0.08)',
+                cursor: 'pointer', fontFamily: "'DM Mono', monospace",
+                transition: 'background 150ms, border-color 150ms, color 150ms',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(79,70,229,0.18)'; e.currentTarget.style.borderColor = 'rgba(79,70,229,0.6)'; e.currentTarget.style.color = '#ffffff' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(79,70,229,0.08)'; e.currentTarget.style.borderColor = 'rgba(79,70,229,0.35)'; e.currentTarget.style.color = '#a5b4fc' }}
+            >
+              Sign in
+            </button>
+          )}
+
           <button
             onClick={clearChat}
             style={{
@@ -295,7 +351,6 @@ export default function RightPanel({ token, onOpenLogin }) {
 
       {/* ── Messages ── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-
         {messages.length === 0 && !isBusy && (
           <div style={{
             textAlign: 'center', marginTop: '80px',
@@ -315,17 +370,17 @@ export default function RightPanel({ token, onOpenLogin }) {
           {isStreaming && streamingText && (
             <AiBubble text={streamingText} isStreaming={true} />
           )}
-
           {isThinking && <ThinkingBubble />}
-
           <div ref={bottomRef} />
         </div>
       </div>
 
       {/* ── Input bar ── */}
       <div style={{
-        padding: '16px 20px', borderTop: '1px solid #1a1a1a',
-        background: '#0f0f0f', flexShrink: 0,
+        padding: '16px',
+        borderTop: '1px solid #1a1a1a',
+        background: '#0f0f0f',
+        flexShrink: 0,
       }}>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
           <input
@@ -334,10 +389,7 @@ export default function RightPanel({ token, onOpenLogin }) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isBusy}
-            placeholder={token
-              ? "Ask a question about your documents..."
-              : "Sign in to start asking questions..."
-            }
+            placeholder="Ask a question about your documents..."
             style={{
               flex: 1, background: '#161616', border: '1px solid #222222',
               color: '#f0f0f0', fontFamily: "'DM Mono', monospace",
@@ -354,7 +406,8 @@ export default function RightPanel({ token, onOpenLogin }) {
             style={{
               width: '44px', height: '44px', borderRadius: '8px', border: 'none',
               background: isBusy || !input.trim() ? 'rgba(79,70,229,0.25)' : '#4f46e5',
-              color: 'white', cursor: isBusy || !input.trim() ? 'default' : 'pointer',
+              color: 'white',
+              cursor: isBusy || !input.trim() ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0, transition: 'background 150ms, transform 150ms',
             }}
@@ -363,8 +416,8 @@ export default function RightPanel({ token, onOpenLogin }) {
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
               style={{ width: '16px', height: '16px' }}>
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22,2 15,22 11,13 2,9" />
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22,2 15,22 11,13 2,9"/>
             </svg>
           </button>
         </div>
@@ -382,7 +435,7 @@ export default function RightPanel({ token, onOpenLogin }) {
         }
         @keyframes thinkDot {
           0%, 60%, 100% { transform: translateY(0);    opacity: 0.4; }
-          30%           { transform: translateY(-4px); opacity: 1;   }
+          30%           { transform: translateY(-4px); opacity: 1; }
         }
         @keyframes cursorBlink {
           0%, 100% { opacity: 1; }
