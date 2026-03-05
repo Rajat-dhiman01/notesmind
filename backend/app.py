@@ -43,9 +43,15 @@ from backend.rag_pipeline import (
 
 app = FastAPI(title="NotesMind API", version="1.0.0")
 
+# CORS — reads allowed origins from env var so production URL can be injected
+# FRONTEND_URL must be set in Railway dashboard to the Vercel production URL
+# Falls back to localhost for local development
+_raw_origins = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,9 +70,15 @@ class DemoAuthRequest(BaseModel):
 
 # ---------------------------------------------------------------------------
 # Vectorstore — in-memory state + disk persistence
+#
+# VECTORSTORE_DIR reads from env var on Railway (persistent volume mount path)
+# Falls back to local relative path for development on Windows
 # ---------------------------------------------------------------------------
 
-VECTORSTORE_DIR = "backend/vectorstore"
+VECTORSTORE_DIR = os.environ.get(
+    "VECTORSTORE_DIR",
+    os.path.join(os.path.dirname(__file__), "vectorstore")
+)
 INDEX_FILE = os.path.join(VECTORSTORE_DIR, "index.faiss")
 CHUNKS_FILE = os.path.join(VECTORSTORE_DIR, "chunks.json")
 

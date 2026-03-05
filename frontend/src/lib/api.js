@@ -2,7 +2,7 @@
 
 import axios from 'axios'
 
-const BASE = 'http://localhost:8000'
+const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 // ---------------------------------------------------------------------------
 // Helper — builds the Authorization header from the JWT token
@@ -65,16 +65,16 @@ export function streamQuestion(question, token, onToken, onDone, onError) {
 
           buffer += decoder.decode(value, { stream: true })
           const lines = buffer.split('\n')
-          buffer = lines.pop() // keep incomplete line in buffer
+          buffer = lines.pop()
 
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue
-            const token = line.slice(6) // strip "data: "
+            const token = line.slice(6)
             if (token === '[DONE]') { onDone(); return }
             if (token) onToken(token.replace(/\\n/g, '\n'))
           }
 
-          read() // continue reading
+          read()
         })
       }
 
