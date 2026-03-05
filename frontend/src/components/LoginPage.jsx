@@ -181,7 +181,7 @@ export default function LoginPage({ onLogin, isModal = false }) {
               e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
             }}
           >
-            Use Demo Account
+            Login As Admin
           </button>
         ) : (
           <div style={{
@@ -217,9 +217,7 @@ export default function LoginPage({ onLogin, isModal = false }) {
                 transition: "border-color 200ms, box-shadow 200ms",
               }}
             />
-            <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#3a3a3a" }}>
-              demo@notesmind.app · notesmind2024
-            </p>
+           
             <button
               onClick={handleDemoLogin}
               disabled={loading}

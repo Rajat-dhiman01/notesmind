@@ -150,7 +150,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           </button>
 
           <a
-            href="https://github.com"
+            href="https://github.com/Rajat-dhiman01"
             target="_blank"
             rel="noopener noreferrer"
             style={{
