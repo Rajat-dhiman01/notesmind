@@ -50,13 +50,16 @@ _raw_origins = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",")]
 
 app.add_middleware(
+    
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 # ---------------------------------------------------------------------------
 # Auth request models
 # ---------------------------------------------------------------------------
