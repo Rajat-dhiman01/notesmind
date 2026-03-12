@@ -122,7 +122,7 @@ def retrieve_chunks(query: str, chunks: List[str], index, top_k: int = 5) -> Lis
     candidate_chunks = [chunks[idx] for idx, _ in top]
 
     # Rerank candidates using cross-encoder
-    final = rerank_chunks(query, candidate_chunks)
+    final = rerank_chunks(query, candidate_chunks, top_k=4)
 
     # TEMPORARY DEBUG
     
@@ -133,7 +133,8 @@ def build_prompt(chunks: List[str], question: str) -> List[dict]:
     system = (
         "You are an expert study assistant. Your job is to explain concepts clearly from the provided context.\n\n"
         "RULES:\n"
-        "- Answer ONLY from the context. If not found, say: 'This topic is not covered in the uploaded document.'\n"
+        "- Answer ONLY from the context. If a concept is not explicitly stated in the context, say: 'This topic is not covered in the uploaded document.'\n"
+        "- NEVER use knowledge from outside the provided context. Do not infer, assume, or add information not present in the context.\n"
         "- Write in clean, structured markdown.\n"
         "- Use ## for main headings, ### for sub-headings.\n"
         "- Use bullet points (- ) for lists. Never run list items into one line.\n"
@@ -142,6 +143,7 @@ def build_prompt(chunks: List[str], question: str) -> List[dict]:
         "- Never duplicate content. Never repeat the question back.\n"
         "- Do not output raw PDF text. Rewrite it cleanly.\n"
         "- Do not mention 'context' or 'document' in your answer.\n"
+        "- If the context contains partial information, answer only what is explicitly supported. Do not fill gaps.\n"
     )
     user = f"Context:\n{context}\n\nQuestion: {question}"
     return [
@@ -260,11 +262,21 @@ SUMMARIZE_KEYWORDS = {
     "main points", "key points", "what does it cover"
 }
 
+EXPLAIN_KEYWORDS = {
+    "explain", "describe", "how does", "how do", "how is",
+    "walk me through", "tell me about", "what is the concept",
+    "elaborate", "break down", "break it down", "in detail",
+    "give me an overview of", "teach me"
+}
+
 def detect_intent(question: str) -> str:
     q = question.lower().strip()
     for keyword in SUMMARIZE_KEYWORDS:
         if keyword in q:
             return "summarize"
+    for keyword in EXPLAIN_KEYWORDS:
+        if keyword in q:
+            return "explain"
     return "qa"
 
 

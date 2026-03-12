@@ -68,8 +68,8 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
         gap: '24px',
         animation: 'fadeUp 0.8s ease both',
         padding: '0 24px',
-        whiteSpace: 'nowrap',
-        maxWidth: '600px',
+        maxWidth: '560px',
+        width: '100%',
         boxSizing: 'border-box',
       }}>
         <div style={{
@@ -99,8 +99,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
           margin: 0,
-          whiteSpace: 'nowrap',
-        }}>
+          }}>
           NotesMind
         </h1>
 
@@ -113,7 +112,8 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           lineHeight: 1.7,
           margin: 0,
         }}>
-          Ask questions. Get answers.<br />Strictly from your own notes.
+          Your documents never leave your control.
+          AI answers strictly from your files — not the internet.
         </p>
 
         <div style={{
@@ -172,6 +172,60 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
             View on GitHub
           </a>
         </div>
+
+        {/* Trust signal */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '24px',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          marginTop: '8px',
+        }}>
+
+          {/* Never sent to OpenAI */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px',
+            fontSize: '11px', color: '#444', fontFamily: "'DM Mono', monospace",
+            letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Never sent to OpenAI
+          </div>
+
+          <div style={{ width: '1px', height: '12px', background: '#2a2a2a' }} />
+
+          {/* Your files only */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px',
+            fontSize: '11px', color: '#444', fontFamily: "'DM Mono', monospace",
+            letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Your files only
+          </div>
+
+          <div style={{ width: '1px', height: '12px', background: '#2a2a2a' }} />
+
+          {/* Groq powered */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px',
+            fontSize: '11px', color: '#444', fontFamily: "'DM Mono', monospace",
+            letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="#4f46e5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+            </svg>
+            Groq powered
+          </div>
+
+        </div>
+
       </div>
 
       {/* Scroll hint */}

@@ -291,9 +291,10 @@ async def ask_question(
     intent = detect_intent(request.question)
     if intent == "summarize":
         selected_chunks = get_summary_chunks(chunks, n=10)
+    elif intent == "explain":
+        selected_chunks = get_summary_chunks(chunks, n=15)
     else:
         selected_chunks = retrieve_chunks(request.question, chunks, index)
-
     messages = build_prompt(selected_chunks, request.question)
     from backend.rag_pipeline import ask_llm_groq
     answer = ask_llm_groq(messages)
