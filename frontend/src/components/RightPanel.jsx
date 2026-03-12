@@ -166,12 +166,13 @@ function ThinkingBubble() {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function RightPanel({ token, onOpenLogin, isMobile, onOpenDrawer }) {
+export default function RightPanel({ token, onOpenLogin, isMobile, onOpenDrawer, activeDoc }) {
   const [messages, setMessages]           = useState([])
   const [streamingText, setStreamingText] = useState('')
   const [isThinking, setIsThinking]       = useState(false)
   const [isStreaming, setIsStreaming]      = useState(false)
   const [input, setInput]                 = useState('')
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
   const bottomRef                         = useRef(null)
   const streamBufferRef                   = useRef('')
 
@@ -235,6 +236,7 @@ export default function RightPanel({ token, onOpenLogin, isMobile, onOpenDrawer 
     setStreamingText('')
     setIsThinking(false)
     setIsStreaming(false)
+    setShowClearConfirm(false)
   }
 
   const isBusy = isThinking || isStreaming
@@ -304,8 +306,32 @@ export default function RightPanel({ token, onOpenLogin, isMobile, onOpenDrawer 
           }}>
             NotesMind
           </span>
-          <span style={{ fontSize: '13px', color: '#555' }}>/</span>
-          <span style={{ fontSize: '13px', color: '#555' }}>Chat</span>
+         <span style={{ fontSize: '13px', color: '#555' }}>/</span>
+          {activeDoc ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              background: 'rgba(79,70,229,0.12)',
+              border: '1px solid rgba(79,70,229,0.35)',
+              borderRadius: '100px', padding: '3px 10px 3px 7px',
+              maxWidth: '200px',
+            }}>
+              <div style={{
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: '#4f46e5', flexShrink: 0,
+                boxShadow: '0 0 6px rgba(79,70,229,0.8)',
+              }} />
+              <span style={{
+                fontSize: '12px', color: '#a5b4fc',
+                whiteSpace: 'nowrap', overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                fontFamily: "'DM Mono', monospace",
+              }}>
+                {activeDoc}
+              </span>
+            </div>
+          ) : (
+            <span style={{ fontSize: '13px', color: '#555' }}>Chat</span>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -333,19 +359,77 @@ export default function RightPanel({ token, onOpenLogin, isMobile, onOpenDrawer 
             </button>
           )}
 
-          <button
-            onClick={clearChat}
-            style={{
-              background: 'none', border: '1px solid #222', color: '#555',
-              fontSize: '11px', padding: '3px 10px', borderRadius: '5px',
-              cursor: 'pointer', fontFamily: "'DM Mono', monospace",
-              transition: 'border-color 150ms, color 150ms',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.color = '#888' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#555' }}
-          >
-            clear
-          </button>
+          {!showClearConfirm ? (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              style={{
+                background: 'rgba(248,113,113,0.08)',
+                border: '1px solid rgba(248,113,113,0.35)',
+                color: '#f87171',
+                fontSize: '11px', padding: '4px 12px', borderRadius: '5px',
+                cursor: 'pointer', fontFamily: "'DM Mono', monospace",
+                transition: 'border-color 150ms, color 150ms, background 150ms',
+                display: 'flex', alignItems: 'center', gap: '5px',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(248,113,113,0.18)'
+                e.currentTarget.style.borderColor = 'rgba(248,113,113,0.6)'
+                e.currentTarget.style.color = '#ffffff'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(248,113,113,0.08)'
+                e.currentTarget.style.borderColor = 'rgba(248,113,113,0.35)'
+                e.currentTarget.style.color = '#f87171'
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3,6 5,6 21,6"/>
+                <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
+                <path d="M10,11v6M14,11v6"/>
+              </svg>
+              clear
+            </button>
+          ) : (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              background: '#1a1a1a', border: '1px solid #2a2a2a',
+              borderRadius: '6px', padding: '4px 8px',
+              animation: 'msgAppear 0.15s ease both',
+            }}>
+              <span style={{ fontSize: '11px', color: '#888', whiteSpace: 'nowrap' }}>
+                Clear chat?
+              </span>
+              <button
+                onClick={clearChat}
+                style={{
+                  background: 'rgba(248,113,113,0.15)',
+                  border: '1px solid rgba(248,113,113,0.4)',
+                  color: '#f87171', fontSize: '11px', padding: '2px 8px',
+                  borderRadius: '4px', cursor: 'pointer',
+                  fontFamily: "'DM Mono', monospace",
+                  transition: 'background 150ms',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.28)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(248,113,113,0.15)'}
+              >
+                yes
+              </button>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                style={{
+                  background: 'none', border: '1px solid #333',
+                  color: '#555', fontSize: '11px', padding: '2px 8px',
+                  borderRadius: '4px', cursor: 'pointer',
+                  fontFamily: "'DM Mono', monospace",
+                  transition: 'border-color 150ms, color 150ms',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#555'; e.currentTarget.style.color = '#888' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}
+              >
+                no
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

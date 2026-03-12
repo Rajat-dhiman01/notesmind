@@ -83,7 +83,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           borderRadius: '100px',
           textAlign: 'center',
         }}>
-          Local AI — No Cloud — No API Keys
+          RAG POWERED — PRIVATE — PRECISE
         </div>
 
         {/* Title — clamp starts smaller on mobile */}

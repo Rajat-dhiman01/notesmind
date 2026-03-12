@@ -1,7 +1,7 @@
 // frontend/src/components/LeftPanel.jsx
 
 import { useState, useEffect, useRef } from 'react'
-import { uploadPDF, getDocuments, resetIndex } from '../lib/api'
+import { uploadPDF, getDocuments, resetIndex, selectDocument } from '../lib/api'
 
 export default function LeftPanel({
   token,
@@ -13,16 +13,19 @@ export default function LeftPanel({
   isMobile,
   drawerOpen,
   onCloseDrawer,
+  onActiveDocChange,
 }) {
   const [file, setFile]                 = useState(null)
-  const [uploading, setUploading]       = useState(false)
-  const [progress, setProgress]         = useState(0)
-  const [status, setStatus]             = useState(null)
-  const [documents, setDocuments]       = useState([])
-  const [dragOver, setDragOver]         = useState(false)
-  const [resetting, setResetting]       = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const dropdownRef                     = useRef(null)
+const [uploading, setUploading]       = useState(false)
+const [progress, setProgress]         = useState(0)
+const [status, setStatus]             = useState(null)
+const [documents, setDocuments]       = useState([])
+const [activeDoc, setActiveDoc]       = useState(null)
+const [dragOver, setDragOver]         = useState(false)
+const [resetting, setResetting]             = useState(false)
+const [showResetConfirm, setShowResetConfirm] = useState(false)
+const [dropdownOpen, setDropdownOpen]       = useState(false)
+const dropdownRef                     = useRef(null)
 
   useEffect(() => {
     if (token) fetchDocs()
@@ -39,14 +42,27 @@ export default function LeftPanel({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [dropdownOpen])
 
-  async function fetchDocs() {
-    try {
-      const res = await getDocuments(token)
-      setDocuments(res.data.documents ?? [])
-    } catch {
-      setDocuments([])
-    }
+ async function fetchDocs() {
+  try {
+    const res = await getDocuments(token)
+    setDocuments(res.data.documents ?? [])
+    const active = res.data.active ?? null
+    setActiveDoc(active)
+    onActiveDocChange?.(active)
+  } catch {
+    setDocuments([])
   }
+}
+async function handleSelectDoc(doc) {
+  if (doc === activeDoc) return
+  try {
+    await selectDocument(doc, token)
+    setActiveDoc(doc)
+    onActiveDocChange?.(doc)
+  } catch {
+    // silently fail — state re-syncs on next fetchDocs
+  }
+}
 
   async function handleUpload() {
     if (!file) return
@@ -502,55 +518,117 @@ export default function LeftPanel({
       </div>
 
       {/* ── Document list ── */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{
-          padding: '14px 20px 10px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#555' }}>
-            Indexed Documents
-          </div>
-          {documents.length > 0 && (
-            <button
-              onClick={handleReset}
-              disabled={resetting}
-              style={{
-                background: 'none', border: '1px solid #222', color: resetting ? '#333' : '#555',
-                fontSize: '10px', padding: '2px 8px', borderRadius: '4px',
-                cursor: resetting ? 'default' : 'pointer', fontFamily: "'DM Mono', monospace",
-                letterSpacing: '0.05em', transition: 'border-color 150ms, color 150ms',
-              }}
-              onMouseEnter={e => { if (!resetting) { e.currentTarget.style.borderColor = '#f87171'; e.currentTarget.style.color = '#f87171' } }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#555' }}
-            >
-              {resetting ? 'clearing...' : 'reset'}
-            </button>
-          )}
+<div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+  <div style={{
+    padding: '14px 20px 10px',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  }}>
+    <div style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#555' }}>
+      Indexed Documents
+    </div>
+   {documents.length > 0 && (
+      !showResetConfirm ? (
+        <button
+          onClick={() => setShowResetConfirm(true)}
+          disabled={resetting}
+          style={{
+            background: 'none', border: '1px solid #222', color: resetting ? '#333' : '#555',
+            fontSize: '10px', padding: '2px 8px', borderRadius: '4px',
+            cursor: resetting ? 'default' : 'pointer', fontFamily: "'DM Mono', monospace",
+            letterSpacing: '0.05em', transition: 'border-color 150ms, color 150ms',
+          }}
+          onMouseEnter={e => { if (!resetting) { e.currentTarget.style.borderColor = '#f87171'; e.currentTarget.style.color = '#f87171' } }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#555' }}
+        >
+          {resetting ? 'clearing...' : 'reset all'}
+        </button>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ fontSize: '10px', color: '#888', whiteSpace: 'nowrap' }}>Sure?</span>
+          <button
+            onClick={() => { setShowResetConfirm(false); handleReset() }}
+            style={{
+              background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.35)',
+              color: '#f87171', fontSize: '10px', padding: '1px 6px',
+              borderRadius: '4px', cursor: 'pointer',
+              fontFamily: "'DM Mono', monospace", transition: 'background 150ms',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.25)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(248,113,113,0.12)'}
+          >
+            yes
+          </button>
+          <button
+            onClick={() => setShowResetConfirm(false)}
+            style={{
+              background: 'none', border: '1px solid #333', color: '#555',
+              fontSize: '10px', padding: '1px 6px', borderRadius: '4px',
+              cursor: 'pointer', fontFamily: "'DM Mono', monospace",
+              transition: 'border-color 150ms, color 150ms',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#555'; e.currentTarget.style.color = '#888' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}
+          >
+            no
+          </button>
         </div>
+      )
+    )}
+  </div>
 
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {documents.length === 0 ? (
-            <div style={{ padding: '0 20px', fontSize: '13px', color: '#555' }}>
-              No documents yet.
-            </div>
-          ) : (
-            documents.map((doc, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '10px 20px', borderBottom: '1px solid #1a1a1a',
-              }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f46e5', flexShrink: 0 }} />
-                <div style={{
-                  fontSize: '13px', color: '#e5e5e5', overflow: 'hidden',
-                  textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-                }}>
-                  {doc}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+  <div style={{ flex: 1, overflowY: 'auto' }}>
+    {documents.length === 0 ? (
+      <div style={{ padding: '0 20px', fontSize: '13px', color: '#555' }}>
+        No documents yet.
       </div>
+    ) : (
+      documents.map((doc, i) => {
+        const isActive = doc === activeDoc
+        return (
+          <div
+            key={i}
+            onClick={() => handleSelectDoc(doc)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 20px', borderBottom: '1px solid #1a1a1a',
+              cursor: 'pointer',
+              background: isActive ? 'rgba(79,70,229,0.08)' : 'transparent',
+              borderLeft: isActive ? '2px solid #4f46e5' : '2px solid transparent',
+              transition: 'background 150ms, border-color 150ms',
+            }}
+            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+          >
+            <div style={{
+              width: '6px', height: '6px', borderRadius: '50%',
+              background: isActive ? '#4f46e5' : '#333',
+              flexShrink: 0, transition: 'background 150ms',
+            }} />
+            <div style={{
+              fontSize: '12px',
+              color: isActive ? '#e5e5e5' : '#666',
+              overflow: 'hidden', textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap', flex: 1,
+              transition: 'color 150ms',
+            }}>
+              {doc}
+            </div>
+            {isActive && (
+              <div style={{
+                fontSize: '9px', color: '#4f46e5',
+                border: '1px solid rgba(79,70,229,0.4)',
+                padding: '1px 6px', borderRadius: '100px',
+                letterSpacing: '0.05em', flexShrink: 0,
+              }}>
+                active
+              </div>
+            )}
+          </div>
+        )
+      })
+    )}
+  </div>
+</div>
 
       <style>{`
         @keyframes dropdownAppear {

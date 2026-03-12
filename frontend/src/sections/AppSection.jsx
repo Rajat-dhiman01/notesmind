@@ -12,9 +12,9 @@ export default function AppSection({
   userEmail,
   userPicture,
 }) {
-  const [drawerOpen, setDrawerOpen] = useState(false)
+ const [drawerOpen, setDrawerOpen] = useState(false)
   const [isMobile, setIsMobile]     = useState(window.innerWidth <= 768)
-
+  const [activeDoc, setActiveDoc]   = useState(null)
   // Update isMobile on window resize
   useEffect(() => {
     function handleResize() {
@@ -56,13 +56,15 @@ export default function AppSection({
         isMobile={isMobile}
         drawerOpen={drawerOpen}
         onCloseDrawer={() => setDrawerOpen(false)}
+        onActiveDocChange={setActiveDoc}
       />
       <RightPanel
-        token={token}
-        onOpenLogin={onOpenLogin}
-        isMobile={isMobile}
-        onOpenDrawer={() => setDrawerOpen(true)}
-      />
+  token={token}
+  onOpenLogin={onOpenLogin}
+  isMobile={isMobile}
+  onOpenDrawer={() => setDrawerOpen(true)}
+  activeDoc={activeDoc}
+/>
     </section>
   )
 }

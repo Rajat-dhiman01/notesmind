@@ -18,4 +18,4 @@ class UploadResponse(BaseModel):
 
 class DocumentsResponse(BaseModel):
     documents: list[str]
-
+    active: str | None = None

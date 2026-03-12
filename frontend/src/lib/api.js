@@ -4,17 +4,9 @@ import axios from 'axios'
 
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
-// ---------------------------------------------------------------------------
-// Helper — builds the Authorization header from the JWT token
-// ---------------------------------------------------------------------------
-
 function authHeaders(token) {
   return { Authorization: `Bearer ${token}` }
 }
-
-// ---------------------------------------------------------------------------
-// API functions — every protected route receives the token
-// ---------------------------------------------------------------------------
 
 export const uploadPDF = (file, token) => {
   const fd = new FormData()
@@ -36,6 +28,12 @@ export const getDocuments = (token) =>
 
 export const resetIndex = (token) =>
   axios.post(`${BASE}/reset`, {}, {
+    headers: authHeaders(token),
+  })
+
+// NEW — tell the backend which document is active
+export const selectDocument = (document, token) =>
+  axios.post(`${BASE}/select`, { document }, {
     headers: authHeaders(token),
   })
 
