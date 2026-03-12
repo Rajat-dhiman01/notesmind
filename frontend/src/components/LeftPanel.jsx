@@ -375,31 +375,52 @@ export default function LeftPanel({
         <input id="file-input" type="file" accept=".pdf" onChange={handleFileChange} style={{ display: 'none' }} />
 
         {file && !uploading && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            background: '#161616', border: '1px solid rgba(79,70,229,0.3)',
-            borderRadius: '8px', padding: '10px 12px', marginBottom: '12px',
-          }}>
-            <div style={{
-              width: '28px', height: '28px', background: 'rgba(79,70,229,0.15)',
-              borderRadius: '6px', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', flexShrink: 0,
-            }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2" style={{ width: '14px', height: '14px' }}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14,2 14,8 20,8"/>
-              </svg>
-            </div>
-            <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontSize: '12px', color: '#f0f0f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {file.name}
-              </div>
-              <div style={{ fontSize: '11px', color: '#555' }}>
-                {(file.size / 1024 / 1024).toFixed(1)} MB
-              </div>
-            </div>
-          </div>
-        )}
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: '10px',
+    background: '#161616', border: '1px solid rgba(79,70,229,0.3)',
+    borderRadius: '8px', padding: '10px 12px', marginBottom: '12px',
+  }}>
+    <div style={{
+      width: '28px', height: '28px', background: 'rgba(79,70,229,0.15)',
+      borderRadius: '6px', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', flexShrink: 0,
+    }}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2" style={{ width: '14px', height: '14px' }}>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14,2 14,8 20,8"/>
+      </svg>
+    </div>
+    <div style={{ overflow: 'hidden', flex: 1 }}>
+      <div style={{ fontSize: '12px', color: '#f0f0f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {file.name}
+      </div>
+      <div style={{ fontSize: '11px', color: '#555' }}>
+        {(file.size / 1024 / 1024).toFixed(1)} MB
+      </div>
+    </div>
+    <button
+      onClick={() => {
+        setFile(null)
+        setStatus(null)
+        document.getElementById('file-input').value = ''
+      }}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: '#555', padding: '4px', borderRadius: '4px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, transition: 'color 150ms',
+      }}
+      onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+      onMouseLeave={e => e.currentTarget.style.color = '#555'}
+      title="Remove file"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+)}
 
         {uploading && (
           <div style={{
