@@ -86,9 +86,32 @@ VECTORSTORE_DIR = os.environ.get(
     "VECTORSTORE_DIR",
     os.path.join(os.path.dirname(__file__), "vectorstore")
 )
+ACTIVE_FILE = os.path.join(VECTORSTORE_DIR, "active.json")
 
 # Active document — which PDF the user is currently chatting with
 _active_doc: str | None = None
+
+
+def _save_active(doc_name: str | None) -> None:
+    """Persist the active document name to disk atomically."""
+    os.makedirs(VECTORSTORE_DIR, exist_ok=True)
+    tmp_path = ACTIVE_FILE + ".tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump({"active": doc_name}, f)
+        os.replace(tmp_path, ACTIVE_FILE)   # atomic on all platforms
+    except OSError:
+        pass   # non-fatal — in-memory state still works for current session
+
+
+def _load_active() -> str | None:
+    """Read the persisted active document name from disk."""
+    try:
+        with open(ACTIVE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("active")
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def _doc_dir(doc_name: str) -> str:
@@ -137,12 +160,20 @@ def _list_docs() -> List[str]:
 
 
 def _auto_select_first():
-    """If no active doc is set, auto-select the first available one."""
+    """
+    On startup: restore persisted active doc if it still exists on disk.
+    Falls back to first available doc if persisted name is stale/missing.
+    """
     global _active_doc
-    if _active_doc is None:
-        docs = _list_docs()
-        if docs:
-            _active_doc = docs[0]
+    if _active_doc is not None:
+        return
+    persisted = _load_active()
+    docs = _list_docs()
+    if persisted and persisted in docs:
+        _active_doc = persisted          # restore exactly what user had
+    elif docs:
+        _active_doc = docs[0]            # fallback — first available
+        _save_active(_active_doc)        # update stale persisted value
 
 
 # Auto-select on startup if docs already exist from a previous run
@@ -218,6 +249,7 @@ async def select_document(
     if request.document not in docs:
         raise HTTPException(status_code=404, detail=f"Document '{request.document}' not found.")
     _active_doc = request.document
+    _save_active(_active_doc)
     return {"message": f"Active document set to '{request.document}'", "document": request.document}
 
 
@@ -240,6 +272,7 @@ async def reset(
         shutil.rmtree(VECTORSTORE_DIR)
         os.makedirs(VECTORSTORE_DIR, exist_ok=True)
     _active_doc = None
+    _save_active(None)
     return {"message": "All documents cleared."}
 
 
