@@ -7,10 +7,13 @@ from typing import Annotated, List
 
 import faiss
 import numpy as np
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from backend.auth import (
     create_jwt,
@@ -25,6 +28,7 @@ from backend.models.schemas import (
     UploadResponse,
 )
 from backend.rag_pipeline import (
+    ask_llm_groq,
     ask_llm_groq_stream,
     build_prompt,
     chunk_text,
@@ -36,10 +40,19 @@ from backend.rag_pipeline import (
 )
 
 # ---------------------------------------------------------------------------
+# Rate limiter — keyed by IP address
+# ---------------------------------------------------------------------------
+
+limiter = Limiter(key_func=get_remote_address)
+
+# ---------------------------------------------------------------------------
 # App + Middleware
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="NotesMind API", version="1.0.0")
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 _raw_origins = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",")]
@@ -52,9 +65,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
+# ---------------------------------------------------------------------------
+# Security constants
+# ---------------------------------------------------------------------------
+
+MAX_FILE_SIZE    = 10 * 1024 * 1024   # 10 MB
+MAX_QUESTION_LEN = 2000               # characters
+PDF_MAGIC_BYTES  = b"%PDF"            # first 4 bytes of every valid PDF
 
 # ---------------------------------------------------------------------------
 # Auth request models
@@ -72,14 +89,6 @@ class SelectRequest(BaseModel):
 
 # ---------------------------------------------------------------------------
 # Vectorstore — per-document folder structure
-#
-# vectorstore/
-#   Unit1_cmos/
-#     chunks.json
-#     index.faiss
-#   Unit2_signals/
-#     chunks.json
-#     index.faiss
 # ---------------------------------------------------------------------------
 
 VECTORSTORE_DIR = os.environ.get(
@@ -88,24 +97,21 @@ VECTORSTORE_DIR = os.environ.get(
 )
 ACTIVE_FILE = os.path.join(VECTORSTORE_DIR, "active.json")
 
-# Active document — which PDF the user is currently chatting with
 _active_doc: str | None = None
 
 
 def _save_active(doc_name: str | None) -> None:
-    """Persist the active document name to disk atomically."""
     os.makedirs(VECTORSTORE_DIR, exist_ok=True)
     tmp_path = ACTIVE_FILE + ".tmp"
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump({"active": doc_name}, f)
-        os.replace(tmp_path, ACTIVE_FILE)   # atomic on all platforms
+        os.replace(tmp_path, ACTIVE_FILE)
     except OSError:
-        pass   # non-fatal — in-memory state still works for current session
+        pass
 
 
 def _load_active() -> str | None:
-    """Read the persisted active document name from disk."""
     try:
         with open(ACTIVE_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -115,14 +121,11 @@ def _load_active() -> str | None:
 
 
 def _doc_dir(doc_name: str) -> str:
-    """Return the folder path for a given document name."""
-    # Sanitize — strip path separators to prevent directory traversal
     safe_name = os.path.basename(doc_name)
     return os.path.join(VECTORSTORE_DIR, safe_name)
 
 
 def _save_doc(doc_name: str, chunks: List[str], index: faiss.IndexFlatL2):
-    """Persist chunks + FAISS index for a single document."""
     folder = _doc_dir(doc_name)
     os.makedirs(folder, exist_ok=True)
     faiss.write_index(index, os.path.join(folder, "index.faiss"))
@@ -131,9 +134,8 @@ def _save_doc(doc_name: str, chunks: List[str], index: faiss.IndexFlatL2):
 
 
 def _load_doc(doc_name: str):
-    """Load chunks + FAISS index for a single document. Returns (chunks, index)."""
     folder = _doc_dir(doc_name)
-    index_path = os.path.join(folder, "index.faiss")
+    index_path  = os.path.join(folder, "index.faiss")
     chunks_path = os.path.join(folder, "chunks.json")
     if not os.path.exists(index_path) or not os.path.exists(chunks_path):
         return None, None
@@ -144,7 +146,6 @@ def _load_doc(doc_name: str):
 
 
 def _list_docs() -> List[str]:
-    """Return list of all document names that have been indexed."""
     if not os.path.exists(VECTORSTORE_DIR):
         return []
     docs = []
@@ -160,39 +161,56 @@ def _list_docs() -> List[str]:
 
 
 def _auto_select_first():
-    """
-    On startup: restore persisted active doc if it still exists on disk.
-    Falls back to first available doc if persisted name is stale/missing.
-    """
     global _active_doc
     if _active_doc is not None:
         return
     persisted = _load_active()
     docs = _list_docs()
     if persisted and persisted in docs:
-        _active_doc = persisted          # restore exactly what user had
+        _active_doc = persisted
     elif docs:
-        _active_doc = docs[0]            # fallback — first available
-        _save_active(_active_doc)        # update stale persisted value
+        _active_doc = docs[0]
+        _save_active(_active_doc)
 
 
-# Auto-select on startup if docs already exist from a previous run
 _auto_select_first()
 
 # ---------------------------------------------------------------------------
-# Auth endpoints — public
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _validate_pdf(contents: bytes) -> None:
+    """Reject anything that isn't a real PDF by checking magic bytes."""
+    if not contents.startswith(PDF_MAGIC_BYTES):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file. Only real PDF files are accepted."
+        )
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+# ---------------------------------------------------------------------------
+# Auth endpoints — public, rate limited against brute force
 # ---------------------------------------------------------------------------
 
 @app.post("/auth/google")
-async def auth_google(request: GoogleAuthRequest):
-    user = verify_google_token(request.id_token)
+@limiter.limit("10/minute")
+async def auth_google(request: Request, body: GoogleAuthRequest):
+    user  = verify_google_token(body.id_token)
     token = create_jwt(email=user["email"], name=user["name"])
     return {"token": token, "name": user["name"], "email": user["email"]}
 
 
 @app.post("/auth/demo")
-async def auth_demo(request: DemoAuthRequest):
-    user = verify_demo_credentials(email=request.email, password=request.password)
+@limiter.limit("10/minute")
+async def auth_demo(request: Request, body: DemoAuthRequest):
+    user  = verify_demo_credentials(email=body.email, password=body.password)
     token = create_jwt(email=user["email"], name=user["name"])
     return {"token": token, "name": user["name"], "email": user["email"]}
 
@@ -201,23 +219,36 @@ async def auth_demo(request: DemoAuthRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/upload", response_model=UploadResponse)
+@limiter.limit("3/minute")
 async def upload_pdf(
+    request: Request,
     user: Annotated[dict, Depends(get_current_user)],
     file: UploadFile = File(...),
 ):
     global _active_doc
 
-    if not file.filename.endswith(".pdf"):
+    # 1. Extension check
+    if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
 
+    # 2. Read + size check
     contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10 MB.")
 
+    # 3. Magic bytes — confirm it's actually a PDF
+    _validate_pdf(contents)
+
+    # 4. Sanitize filename
+    safe_name = os.path.basename(file.filename).strip()
+
+    # 5. Write to temp, extract, clean up
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(contents)
         tmp_path = tmp.name
 
     try:
-        text = extract_text_from_pdf(tmp_path)
+        text   = extract_text_from_pdf(tmp_path)
         chunks = chunk_text(text)
     finally:
         os.unlink(tmp_path)
@@ -226,35 +257,38 @@ async def upload_pdf(
         raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
 
     embeddings = get_embeddings(chunks)
-    dimension = embeddings.shape[1]
-    index = faiss.IndexFlatL2(dimension)
+    dimension  = embeddings.shape[1]
+    index      = faiss.IndexFlatL2(dimension)
     index.add(embeddings)
 
-    _save_doc(file.filename, chunks, index)
+    _save_doc(safe_name, chunks, index)
 
-    # Auto-select the newly uploaded doc
-    _active_doc = file.filename
+    _active_doc = safe_name
+    _save_active(_active_doc)
 
-    return UploadResponse(message=f"'{file.filename}' indexed successfully.", chunks=len(chunks))
+    return UploadResponse(message=f"'{safe_name}' indexed successfully.", chunks=len(chunks))
 
 
 @app.post("/select")
+@limiter.limit("30/minute")
 async def select_document(
-    request: SelectRequest,
+    request: Request,
+    body: SelectRequest,
     user: Annotated[dict, Depends(get_current_user)],
 ):
-    """Set the active document. All subsequent /ask calls will use this doc."""
     global _active_doc
     docs = _list_docs()
-    if request.document not in docs:
-        raise HTTPException(status_code=404, detail=f"Document '{request.document}' not found.")
-    _active_doc = request.document
+    if body.document not in docs:
+        raise HTTPException(status_code=404, detail=f"Document '{body.document}' not found.")
+    _active_doc = body.document
     _save_active(_active_doc)
-    return {"message": f"Active document set to '{request.document}'", "document": request.document}
+    return {"message": f"Active document set to '{body.document}'", "document": body.document}
 
 
 @app.get("/documents", response_model=DocumentsResponse)
+@limiter.limit("30/minute")
 async def list_documents(
+    request: Request,
     user: Annotated[dict, Depends(get_current_user)],
 ):
     docs = _list_docs()
@@ -262,10 +296,11 @@ async def list_documents(
 
 
 @app.post("/reset")
+@limiter.limit("5/minute")
 async def reset(
+    request: Request,
     user: Annotated[dict, Depends(get_current_user)],
 ):
-    """Delete all indexed documents and clear active doc."""
     global _active_doc
     import shutil
     if os.path.exists(VECTORSTORE_DIR):
@@ -277,49 +312,61 @@ async def reset(
 
 
 @app.post("/ask", response_model=AskResponse)
+@limiter.limit("15/minute")
 async def ask_question(
-    request: AskRequest,
+    request: Request,
+    body: AskRequest,
     user: Annotated[dict, Depends(get_current_user)],
 ):
     if not _active_doc:
         raise HTTPException(status_code=400, detail="No document selected. Please upload or select a PDF first.")
 
+    if len(body.question) > MAX_QUESTION_LEN:
+        raise HTTPException(status_code=400, detail=f"Question too long. Maximum {MAX_QUESTION_LEN} characters.")
+
     chunks, index = _load_doc(_active_doc)
     if chunks is None:
         raise HTTPException(status_code=400, detail="Active document could not be loaded.")
 
-    intent = detect_intent(request.question)
+    intent = detect_intent(body.question)
     if intent == "summarize":
         selected_chunks = get_summary_chunks(chunks, n=10)
     elif intent == "explain":
         selected_chunks = get_summary_chunks(chunks, n=15)
     else:
-        selected_chunks = retrieve_chunks(request.question, chunks, index)
-    messages = build_prompt(selected_chunks, request.question)
-    from backend.rag_pipeline import ask_llm_groq
-    answer = ask_llm_groq(messages)
+        selected_chunks = retrieve_chunks(body.question, chunks, index)
+
+    messages = build_prompt(selected_chunks, body.question)
+    answer   = ask_llm_groq(messages)
     return AskResponse(answer=answer)
 
 
 @app.post("/ask/stream")
+@limiter.limit("15/minute")
 async def ask_question_stream(
-    request: AskRequest,
+    request: Request,
+    body: AskRequest,
     user: Annotated[dict, Depends(get_current_user)],
 ):
     if not _active_doc:
         raise HTTPException(status_code=400, detail="No document selected. Please upload or select a PDF first.")
 
+    if len(body.question) > MAX_QUESTION_LEN:
+        raise HTTPException(status_code=400, detail=f"Question too long. Maximum {MAX_QUESTION_LEN} characters.")
+
     chunks, index = _load_doc(_active_doc)
     if chunks is None:
         raise HTTPException(status_code=400, detail="Active document could not be loaded.")
 
-    intent = detect_intent(request.question)
+    intent = detect_intent(body.question)
     if intent == "summarize":
         selected_chunks = get_summary_chunks(chunks, n=10)
+    elif intent == "explain":
+        selected_chunks = get_summary_chunks(chunks, n=15)
     else:
-        selected_chunks = retrieve_chunks(request.question, chunks, index)
+        selected_chunks = retrieve_chunks(body.question, chunks, index)
 
-    prompt = build_prompt(selected_chunks, request.question)
+    prompt = build_prompt(selected_chunks, body.question)
 
     def token_generator():
         for token in ask_llm_groq_stream(prompt):

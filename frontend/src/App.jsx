@@ -1,23 +1,48 @@
 // frontend/src/App.jsx
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import LoginPage from './components/LoginPage'
 import AppSection from './sections/AppSection'
 import HeroSection from './sections/HeroSection'
 
 export default function App() {
-  const [token, setToken]           = useState(() => localStorage.getItem('nm_token'))
-  const [userName, setUserName]     = useState(() => localStorage.getItem('nm_name') || '')
-  const [userEmail, setUserEmail]   = useState(() => localStorage.getItem('nm_email') || '')
+  const [token, setToken]             = useState(() => localStorage.getItem('nm_token'))
+  const [userName, setUserName]       = useState(() => localStorage.getItem('nm_name') || '')
+  const [userEmail, setUserEmail]     = useState(() => localStorage.getItem('nm_email') || '')
   const [userPicture, setUserPicture] = useState(() => localStorage.getItem('nm_picture') || null)
-  const [showModal, setShowModal]   = useState(false)
+  const [showModal, setShowModal]     = useState(false)
 
-  // 4th argument is picture — Google profile photo URL or null for demo
+  // ── JWT expiry check on mount ──────────────────────────────────────────────
+  // If the stored token is expired, clear everything immediately so the user
+  // sees the logged-out state instead of silent 401 errors on every API call.
+  useEffect(() => {
+    if (!token) return
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload.exp * 1000 < Date.now()) {
+        clearAuth()
+      }
+    } catch {
+      // Malformed token — clear it
+      clearAuth()
+    }
+  }, [])
+
+  function clearAuth() {
+    localStorage.removeItem('nm_token')
+    localStorage.removeItem('nm_name')
+    localStorage.removeItem('nm_email')
+    localStorage.removeItem('nm_picture')
+    setToken(null)
+    setUserName('')
+    setUserEmail('')
+    setUserPicture(null)
+  }
+
   function handleLogin(jwt, name, email, picture) {
     localStorage.setItem('nm_token', jwt)
     localStorage.setItem('nm_name', name)
     localStorage.setItem('nm_email', email)
-    // Only store picture if it exists — don't store the string "null"
     if (picture) {
       localStorage.setItem('nm_picture', picture)
     } else {
@@ -36,15 +61,7 @@ export default function App() {
   }
 
   function handleLogout() {
-    localStorage.removeItem('nm_token')
-    localStorage.removeItem('nm_name')
-    localStorage.removeItem('nm_email')
-    localStorage.removeItem('nm_picture')
-
-    setToken(null)
-    setUserName('')
-    setUserEmail('')
-    setUserPicture(null)
+    clearAuth()
   }
 
   function handleStartUsing() {
