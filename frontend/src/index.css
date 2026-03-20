@@ -1,1 +1,13 @@
-@import "tailwindcss";
+@import "tailwindcss";  
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+@keyframes meteorFall {
+  0%   { opacity: 0; transform: rotate(15deg) translateY(-10px); }
+  5%   { opacity: 1; }
+  95%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(15deg) translateY(100vh); }
+}

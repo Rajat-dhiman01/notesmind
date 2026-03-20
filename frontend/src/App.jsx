@@ -1,9 +1,11 @@
 // frontend/src/App.jsx
 
 import { useState, useEffect } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import LoginPage from './components/LoginPage'
 import AppSection from './sections/AppSection'
 import HeroSection from './sections/HeroSection'
+import HowItWorksPage from './pages/HowItWorksPage'
 
 export default function App() {
   const [token, setToken]             = useState(() => localStorage.getItem('nm_token'))
@@ -12,9 +14,9 @@ export default function App() {
   const [userPicture, setUserPicture] = useState(() => localStorage.getItem('nm_picture') || null)
   const [showModal, setShowModal]     = useState(false)
 
+  const navigate = useNavigate()
+
   // ── JWT expiry check on mount ──────────────────────────────────────────────
-  // If the stored token is expired, clear everything immediately so the user
-  // sees the logged-out state instead of silent 401 errors on every API call.
   useEffect(() => {
     if (!token) return
     try {
@@ -23,7 +25,6 @@ export default function App() {
         clearAuth()
       }
     } catch {
-      // Malformed token — clear it
       clearAuth()
     }
   }, [])
@@ -72,13 +73,22 @@ export default function App() {
     }
   }
 
+  function handleLearnMore() {
+    navigate('/how-it-works')
+  }
+
   function openLoginModal() {
     setShowModal(true)
   }
 
-  return (
+  // ── Main page — Hero + App ─────────────────────────────────────────────────
+  const MainPage = (
     <>
-      <HeroSection onStartUsing={handleStartUsing} isLoggedIn={!!token} />
+      <HeroSection
+        onStartUsing={handleStartUsing}
+        isLoggedIn={!!token}
+        onLearnMore={handleLearnMore}
+      />
 
       <AppSection
         token={token}
@@ -136,4 +146,11 @@ export default function App() {
       )}
     </>
   )
-}
+
+  return (
+    <Routes>
+      <Route path="/" element={MainPage} />
+      <Route path="/how-it-works" element={<HowItWorksPage />} />
+    </Routes>
+  )
+}     

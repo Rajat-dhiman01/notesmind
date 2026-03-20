@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
-export default function HeroSection({ onStartUsing, isLoggedIn }) {
+export default function HeroSection({ onStartUsing, isLoggedIn, onLearnMore }) {
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -86,7 +86,6 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           RAG POWERED — PRIVATE — PRECISE
         </div>
 
-        {/* Title — clamp starts smaller on mobile */}
         <h1 style={{
           fontFamily: "'Syne', sans-serif",
           fontSize: 'clamp(32px, 5vw, 72px)',
@@ -99,7 +98,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
           margin: 0,
-          }}>
+        }}>
           NotesMind
         </h1>
 
@@ -123,6 +122,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           flexWrap: 'wrap',
           justifyContent: 'center',
         }}>
+          {/* Primary CTA */}
           <button
             onClick={onStartUsing}
             style={{
@@ -149,6 +149,34 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
             </svg>
           </button>
 
+          {/* Learn more — ghost button */}
+          <button
+            onClick={onLearnMore}
+            style={{
+              background: 'transparent',
+              color: '#888888',
+              border: '1px solid #2a2a2a',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontFamily: "'DM Mono', monospace",
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'border-color 150ms, color 150ms, transform 150ms',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.color = '#f0f0f0'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#888888'; e.currentTarget.style.transform = 'translateY(0)' }}
+          >
+            Learn more
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+          </button>
+
+          {/* GitHub link */}
           <a
             href="https://github.com/Rajat-dhiman01"
             target="_blank"
@@ -173,7 +201,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           </a>
         </div>
 
-        {/* Trust signal */}
+        {/* Trust signals */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -182,8 +210,6 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
           justifyContent: 'center',
           marginTop: '8px',
         }}>
-
-          {/* Never sent to OpenAI */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px',
             fontSize: '11px', color: '#444', fontFamily: "'DM Mono', monospace",
             letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
@@ -197,7 +223,6 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
 
           <div style={{ width: '1px', height: '12px', background: '#2a2a2a' }} />
 
-          {/* Your files only */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px',
             fontSize: '11px', color: '#444', fontFamily: "'DM Mono', monospace",
             letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
@@ -213,7 +238,6 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
 
           <div style={{ width: '1px', height: '12px', background: '#2a2a2a' }} />
 
-          {/* Groq powered */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px',
             fontSize: '11px', color: '#444', fontFamily: "'DM Mono', monospace",
             letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
@@ -223,9 +247,7 @@ export default function HeroSection({ onStartUsing, isLoggedIn }) {
             </svg>
             Groq powered
           </div>
-
         </div>
-
       </div>
 
       {/* Scroll hint */}
