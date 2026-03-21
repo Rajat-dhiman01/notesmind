@@ -45,21 +45,6 @@ The hybrid approach catches things pure semantic search misses (exact terms, acr
 
 ---
 
-## Running locally
-
-```bash
-# Backend
-python -m uvicorn backend.app:app --reload
-
-# Frontend (separate terminal)
-cd frontend
-npm install
-npm run dev
-```
-
-Copy `.env.example` to `.env` and fill in your Groq API key and Google OAuth client ID.
-
----
 
 ## Security
 
