@@ -1,6 +1,10 @@
 # NotesMind
 
 Upload a PDF. Ask questions. Get answers - strictly from your document, nothing hallucinated.
+<img width="1902" height="891" alt="image" src="https://github.com/user-attachments/assets/50c0ff87-e66a-44f6-ace5-0f8f9a46afde" />
+
+<img width="1919" height="873" alt="image" src="https://github.com/user-attachments/assets/94a66523-3ba1-4067-a515-46d246836153" />
+
 
 Live at **[notesmind.pro](https://notesmind.pro)**
 
