@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { streamQuestion } from '../lib/api'
+import { usePostHog } from '@posthog/react'
 
 // ─── Markdown renderer config ────────────────────────────────────────────────
 
@@ -174,7 +175,8 @@ export default function RightPanel({ token, onOpenLogin, isMobile, onOpenDrawer,
   const [input, setInput]                 = useState('')
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const bottomRef                         = useRef(null)
-  const streamBufferRef                   = useRef('')
+ const streamBufferRef                   = useRef('')
+  const posthog                           = usePostHog() 
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -196,6 +198,12 @@ export default function RightPanel({ token, onOpenLogin, isMobile, onOpenDrawer,
     setIsThinking(true)
     setStreamingText('')
     streamBufferRef.current = ''
+
+    // ── Track question asked ─────────────────────────────────────────────
+    posthog.capture('question_asked', {
+      question_length: question.length,
+      active_doc: activeDoc ?? null,
+    })
 
     streamQuestion(
       question, token,

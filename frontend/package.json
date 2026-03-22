@@ -10,11 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@posthog/react": "^1.8.2",
     "@react-oauth/google": "^0.13.4",
     "@tabler/icons-react": "^3.40.0",
     "@tailwindcss/vite": "^4.2.1",
     "axios": "^1.13.6",
     "framer-motion": "^12.36.0",
+    "posthog-js": "^1.363.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",

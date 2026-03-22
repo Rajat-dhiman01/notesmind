@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
+import { usePostHog } from '@posthog/react'
 import LoginPage from './components/LoginPage'
 import AppSection from './sections/AppSection'
 import HeroSection from './sections/HeroSection'
@@ -15,6 +16,7 @@ export default function App() {
   const [showModal, setShowModal]     = useState(false)
 
   const navigate = useNavigate()
+  const posthog  = usePostHog()
 
   // ── JWT expiry check on mount ──────────────────────────────────────────────
   useEffect(() => {
@@ -28,6 +30,16 @@ export default function App() {
       clearAuth()
     }
   }, [])
+
+  // ── Re-identify user on mount if token already exists ─────────────────────
+  useEffect(() => {
+    if (token && userEmail) {
+      posthog.identify(userEmail, {
+        name: userName,
+        email: userEmail,
+      })
+    }
+  }, [token])
 
   function clearAuth() {
     localStorage.removeItem('nm_token')
@@ -56,12 +68,24 @@ export default function App() {
     setUserPicture(picture || null)
     setShowModal(false)
 
+    // ── Identify user + capture login event ───────────────────────────────
+    posthog.identify(email, {
+      name: name,
+      email: email,
+      login_method: picture ? 'google' : 'demo',
+    })
+    posthog.capture('user_signed_in', {
+      login_method: picture ? 'google' : 'demo',
+    })
+
     setTimeout(() => {
       document.getElementById('app')?.scrollIntoView({ behavior: 'smooth' })
     }, 100)
   }
 
   function handleLogout() {
+    posthog.capture('user_signed_out')
+    posthog.reset()
     clearAuth()
   }
 
@@ -153,4 +177,4 @@ export default function App() {
       <Route path="/how-it-works" element={<HowItWorksPage />} />
     </Routes>
   )
-}     
+}

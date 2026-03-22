@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { uploadPDF, getDocuments, resetIndex, selectDocument } from '../lib/api'
-
+import { usePostHog } from '@posthog/react'
 export default function LeftPanel({
   token,
   onOpenLogin,
@@ -26,6 +26,7 @@ const [resetting, setResetting]             = useState(false)
 const [showResetConfirm, setShowResetConfirm] = useState(false)
 const [dropdownOpen, setDropdownOpen]       = useState(false)
 const dropdownRef                     = useRef(null)
+const posthog                         = usePostHog()
 
   useEffect(() => {
     if (token) fetchDocs()
@@ -85,6 +86,13 @@ async function handleSelectDoc(doc) {
       setStatus({ type: 'ok', text: res.data.message ?? 'Indexed successfully.' })
       setFile(null)
       await fetchDocs()
+
+      // ── Track successful upload ──────────────────────────────────────────
+      posthog.capture('pdf_uploaded', {
+        file_name: file.name,
+        file_size_mb: parseFloat((file.size / 1024 / 1024).toFixed(2)),
+        chunks: res.data.chunks ?? null,
+      })
     } catch (err) {
       clearInterval(interval)
       setStatus({ type: 'err', text: err?.response?.data?.detail ?? 'Upload failed.' })
