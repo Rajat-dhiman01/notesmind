@@ -7,7 +7,7 @@ import LoginPage from './components/LoginPage'
 import AppSection from './sections/AppSection'
 import HeroSection from './sections/HeroSection'
 import HowItWorksPage from './pages/HowItWorksPage'
-
+import PwaInstallBanner from './components/PwaInstallBanner'
 export default function App() {
   const [token, setToken]             = useState(() => localStorage.getItem('nm_token'))
   const [userName, setUserName]       = useState(() => localStorage.getItem('nm_name') || '')
@@ -168,6 +168,7 @@ export default function App() {
           <LoginPage onLogin={handleLogin} isModal={true} />
         </div>
       )}
+    <PwaInstallBanner />
     </>
   )
 
